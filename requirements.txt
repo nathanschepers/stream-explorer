@@ -1,2 +1,4 @@
 python-mpv
 pyyaml
+asciimatics
+readchar
