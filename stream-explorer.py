@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-from mpv_util import player, set_title_callback
+from mpv_util import player, register_title_callback
 import readchar
 
 stations = [
@@ -28,14 +28,14 @@ stations = [
 
 class PlayerActions:
     def __init__(
-        self,
+            self,
     ):
         self.station_index = 0
         self.player = player
         self.now_playing = None
         self.playing = False
         self.new = True
-        set_title_callback(self._set_now_playing)
+        register_title_callback(self._set_now_playing)
 
     def _set_now_playing(self, value):
         if value and value not in stations[self.station_index]["title_ignore"]:
