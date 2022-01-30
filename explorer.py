@@ -17,23 +17,17 @@ from mpv_util.stream_player import StreamPlayer
 stations_db = [
     {
         "name": "Radio Thiossane",
+        "city": "Dakar",
         "country": "Senegal",
+        "location": (14.716677, -17.467686),
         "stream": "http://listen.senemultimedia.net:8110/stream",
-        "title_ignore": [
-            "stream",
-            "Advert: - Advert:",
-        ],
-        "title_parser": lambda s: (s.split(" - ") + [None]),
     },
     {
         "name": "Dr. Dick's Dub Shack",
+        "city": "Hamilton",
         "country": "Bermuda",
+        "location": (32.339008, -64.738419),
         "stream": "https://streamer.radio.co/s0635c8b0d/listen",
-        "title_ignore": [
-            "listen",
-            "rob - dub shack intermission",
-        ],
-        "title_parser": lambda s: (s.split(" - ")),
     },
 ]
 
@@ -47,7 +41,7 @@ class PlayerView(Frame):
         "album": "-",
     }
 
-    def __init__(self, screen: Screen):
+    def __init__(self, screen: Screen, stream_player: StreamPlayer):
         super(PlayerView, self).__init__(
             screen,
             5,
@@ -58,7 +52,7 @@ class PlayerView(Frame):
             title="Player",
         )
 
-        self._player = StreamPlayer(MPVWrapper(), stations_db)
+        self._player = stream_player
         self._player.register_songinfo_callback(self._update_song)
         self._player.register_stationinfo_callback(self._update_station)
 
@@ -69,40 +63,46 @@ class PlayerView(Frame):
             disabled=True,
         )
         self._station_name = Text(
-            label="Name:",
+            label="Station name:",
             name="station_name",
             disabled=True,
         )
 
         # Label initialization (song)
-        self._artist = Text(label="Artist:", name="artist", disabled=True)
-        self._song = Text(label="Song:", name="song", disabled=True)
-        self._album = Text(label="Album:", name="album", disabled=True)
+        self._now_playing = Text(label="Now playing:", name="now_playing", disabled=True)
 
         # set up layout and widgets
-        layout = Layout([25, 25, 50], fill_frame=True)
+        layout = Layout([100], fill_frame=True)
         self.add_layout(layout)
-        layout.add_widget(self._station_location, 0)
+        layout.add_widget(self._now_playing, 0)
         layout.add_widget(self._station_name, 0)
-        layout.add_widget(self._artist, 1)
-        layout.add_widget(self._song, 1)
-        layout.add_widget(self._album, 1)
+        layout.add_widget(self._station_location, 0)
         self.fix()
 
     def _load(self):
         self.data = self.__empty_data
         self.save()
-        self._player.force_update()
+        self._player.force_callbacks()
+        self._player.play()
 
-    def _update_song(self, song_details: dict[str, str]) -> None:
+    def _update_song(self, now_playing: str) -> None:
         """this is called from the player when new song information is available"""
-        self.data = song_details
+        updated_song = {
+            "now_playing": now_playing
+        }
+
+        self.data = updated_song
         self.save()
         self.screen.force_update()
 
-    def _update_station(self, station_details: dict[str, str]) -> None:
+    def _update_station(self, station: dict) -> None:
         """this is called from the player when new station information is available"""
-        self.data = station_details
+        updated_station = {
+            "station_location": f"{station['city']}, {station['country']}",
+            "station_name": station["name"],
+        }
+
+        self.data = updated_station
         self.save()
         self.screen.force_update()
 
@@ -133,8 +133,10 @@ class PlayerView(Frame):
 
 
 def player(screen: Screen):
+    stream_player = StreamPlayer(MPVWrapper(), stations_db)
+
     scenes = [
-        Scene([PlayerView(screen)], -1, name="Station Explorer"),
+        Scene([PlayerView(screen, stream_player)], -1, name="Station Explorer"),
     ]
 
     screen.play(

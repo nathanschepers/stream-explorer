@@ -1,6 +1,5 @@
 http://listen.senemultimedia.net:8110/stream
  - radio thiossane sans ads?
- - streams the artist!
 
 https://streamer.radio.co/s0635c8b0d/listen
 - dr dick
