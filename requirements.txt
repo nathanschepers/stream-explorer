@@ -1,3 +1,4 @@
-python-mpv~=0.5.2
 asciimatics~=1.13.0
-readchar~=3.0.5
+protobuf~=3.19.4
+requests~=2.27.1
+mapbox-vector-tile
