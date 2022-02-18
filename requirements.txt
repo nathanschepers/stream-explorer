@@ -1,4 +1,3 @@
 asciimatics~=1.13.0
-protobuf~=3.19.4
 requests~=2.27.1
-mapbox-vector-tile
+waiting~=1.4.1

@@ -1,8 +1,6 @@
 #!/usr/bin/env python3
 
 # -*- coding: utf-8 -*-
-from __future__ import division
-from __future__ import print_function
 import traceback
 from math import pi, exp, atan, log, tan, sqrt
 import os
@@ -10,20 +8,15 @@ import json
 import threading
 from ast import literal_eval
 from collections import OrderedDict
-from asciimatics.event import KeyboardEvent
 from asciimatics.renderers import ColourImageFile
 from asciimatics.widgets import (
-    PopUpDialog,
     Widget,
 )
 from asciimatics.screen import Screen
-from asciimatics.exceptions import ResizeScreenError, StopApplication, InvalidFields
 
 import mapbox_vector_tile
 import requests
 from google.protobuf.message import DecodeError
-
-from wcwidth import wcswidth
 
 # Global constants for the applications
 # Replace `_KEY` with the free one that you get from signing up with www.mapbox.com
@@ -56,10 +49,15 @@ class Map(Widget):
 
     @value.setter
     def value(self, value_dict):
-        self._latitude = value_dict.get("latitude", 51.4778)
-        self._longitude = value_dict.get("longitude", -0.0015)
-        self._zoom = value_dict.get("zoom", 0)
+        self._value_update_count += 1
+        self._desired_latitude = value_dict.get("latitude")
+        self._desired_longitude = value_dict.get("longitude")
+        self._desired_zoom = value_dict.get("zoom")
         self.update(0)
+
+    def force_center(self, lat, lon):
+        self._latitude = lat
+        self._longitude = lon
 
     def update(self, frame_no):
         self._update(frame_no)
@@ -67,8 +65,6 @@ class Map(Widget):
         self._frame.canvas.refresh()
 
     def reset(self):
-        self._latitude = self._initial_latitude
-        self._longitude = self._initial_longitude
         self.update(0)
 
     def process_event(self, event):
@@ -108,9 +104,7 @@ class Map(Widget):
 
     __slots__ = [
         "_latitude",
-        "_initial_latitude",
         "_longitude",
-        "_initial_longitude",
         "_zoom",
         "_satellite",
         "_tiles",
@@ -125,24 +119,25 @@ class Map(Widget):
         "_oops",
         "_thread",
         "_frame",
+        "_ready",
+        "_value_update_count",
     ]
 
     def __init__(
         self,
         latitude: float = 51.4778,
         longitude: float = -0.0015,
-        zoom: int = 0,
+        zoom: int = 5,
         satellite: bool = False,
         name: str = None,
-        **kwargs
+        **kwargs,
     ):
-        super(Map, self).__init__(name, **kwargs)
+        super(Map, self).__init__(name, disabled=True, **kwargs)
         # Current state of the map
+        self._value_update_count = 0
         self._zoom = zoom
         self._latitude = latitude
-        self._initial_latitude = latitude
         self._longitude = longitude
-        self._initial_longitude = longitude
         self._tiles = OrderedDict()
         self._size = _START_SIZE
         self._satellite = satellite
@@ -160,11 +155,16 @@ class Map(Widget):
         self._oops = None
         self._thread = threading.Thread(target=self._get_tiles)
         self._thread.daemon = True
-        # self._thread.start()
 
         # a separate directory to store cached files.
         if not os.path.isdir("mapscache"):
             os.mkdir("mapscache")
+
+        self._ready = True
+
+    @property
+    def is_ready(self):
+        return self._ready
 
     def _scale_coords(self, x, y, extent, xo, yo):
         """Convert from tile coordinates to "pixels" - i.e. text characters."""
@@ -605,13 +605,13 @@ class Map(Widget):
             # Now draw all the available tiles.
             count = self._draw_tiles(x_offset, y_offset, bg)
 
-        # Just a few pointers on what the user should do...
+        # If no tiles were drawn
         if count == 0:
             self._frame.canvas.centre(
                 " Loading - please wait... ", self._frame.canvas.height // 2, 1
             )
 
-        # self._frame.canvas.centre("Press '?' for help.", 0, 1)
+        # we're probably required to put this OSM data at the bottom
         # if _KEY == "":
         #     footer = "Using local cached data - go to https://www.mapbox.com/ and get a free key."
         # else:
@@ -621,94 +621,3 @@ class Map(Widget):
         # self._frame.canvas.centre(footer, self._frame.canvas.height - 1, 1)
 
         return count
-
-    # def process_event(self, event):
-    #     """User input for the main map view."""
-    #     if isinstance(event, KeyboardEvent):
-    #         if event.key_code in [Screen.ctrl("m"), Screen.ctrl("j")]:
-    #             self._scene.add_effect(
-    #                 EnterLocation(
-    #                     self._frame.canvas,
-    #                     self._longitude,
-    #                     self._latitude,
-    #                     self._on_new_location,
-    #                 )
-    #             )
-    #         elif event.key_code in [ord("q"), ord("Q"), Screen.ctrl("c")]:
-    #             raise StopApplication("User quit")
-    #         elif event.key_code in [ord("t"), ord("T")]:
-    #             self._satellite = not self._satellite
-    #             if self._satellite:
-    #                 self._size = _START_SIZE
-    #         elif event.key_code == ord("?"):
-    #             self._scene.add_effect(PopUpDialog(self._frame.canvas, _HELP, ["OK"]))
-    #         elif event.key_code == ord("+") and self._zoom <= 20:
-    #             if self._desired_zoom < 20:
-    #                 self._desired_zoom += 1
-    #         elif event.key_code == ord("-") and self._zoom >= 0:
-    #             if self._desired_zoom > 0:
-    #                 self._desired_zoom -= 1
-    #         elif event.key_code == ord("0"):
-    #             self._desired_zoom = 0
-    #         elif event.key_code == ord("9"):
-    #             self._desired_zoom = 20
-    #         elif event.key_code == Screen.KEY_LEFT:
-    #             self._desired_longitude -= 360 / 2 ** self._zoom / self._size * 10
-    #         elif event.key_code == Screen.KEY_RIGHT:
-    #             self._desired_longitude += 360 / 2 ** self._zoom / self._size * 10
-    #         elif event.key_code == Screen.KEY_UP:
-    #             self._desired_latitude = self._inc_lat(
-    #                 self._desired_latitude, -self._size / 10
-    #             )
-    #         elif event.key_code == Screen.KEY_DOWN:
-    #             self._desired_latitude = self._inc_lat(
-    #                 self._desired_latitude, self._size / 10
-    #             )
-    #         else:
-    #             return
-    #
-    #         # Trigger a reload of the tiles and redraw map
-    #         self._updated.set()
-    #         self._frame.canvas.force_update()
-
-    # def _on_new_location(self, form):
-    #     """Set a new desired location entered in the pop-up form."""
-    #     self._desired_longitude = float(form.data["long"])
-    #     self._desired_latitude = float(form.data["lat"])
-    #     self._desired_zoom = 13
-    #     self._frame.canvas.force_update()
-
-    # # noinspection PyUnusedLocal
-    # # pylint: disable=unused-argument
-    # def clone(self, new_screen, new_scene):
-    #     # On resize, there will be a new Map - kill the thread in this one.
-    #     self._running = False
-    #     self._updated.set()
-    #
-    # @property
-    # def frame_update_count(self):
-    #     # Only redraw if required - as determined by the update logic.
-    #     return self._next_update
-    #
-    # @property
-    # def stop_frame(self):
-    #     # No specific end point for this Effect.  Carry on running forever.
-    #     return 0
-    #
-    # def reset(self):
-    #     # Nothing special to do.  Just need this to satisfy the ABC.
-    #     pass
-
-
-# def demo(screen, scene):
-#     screen.play([Scene([Map(screen)], -1)], stop_on_resize=True, start_scene=scene)
-#
-#
-# if __name__ == "__main__":
-#     last_scene = None
-#     while True:
-#         try:
-#             Screen.wrapper(demo, catch_interrupt=False, arguments=[last_scene])
-#             sys.exit(0)
-#         except ResizeScreenError as e:
-#             last_scene = e.scene
