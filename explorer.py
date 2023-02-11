@@ -18,20 +18,20 @@ from map.map_widget import Map
 
 # to be replaced with... something. wrote to radio.garden about API docs.
 STATIONS_DB = [
-    # {
-    #     "name": "Radio Thiossane",
-    #     "city": "Dakar",
-    #     "country": "Senegal",
-    #     "location": (14.716677, -17.467686),
-    #     "stream": "http://listen.senemultimedia.net:8110/stream",
-    # },
-    # {
-    #     "name": "Dr. Dick's Dub Shack",
-    #     "city": "Hamilton",
-    #     "country": "Bermuda",
-    #     "location": (32.339008, -64.738419),
-    #     "stream": "https://streamer.radio.co/s0635c8b0d/listen",
-    # },
+    {
+        "name": "Radio Thiossane",
+        "city": "Dakar",
+        "country": "Senegal",
+        "location": (14.716677, -17.467686),
+        "stream": "http://listen.senemultimedia.net:8110/stream",
+    },
+    {
+        "name": "Dr. Dick's Dub Shack",
+        "city": "Hamilton",
+        "country": "Bermuda",
+        "location": (32.339008, -64.738419),
+        "stream": "https://streamer.radio.co/s0635c8b0d/listen",
+    },
     {
         "name": "Ycoden Daute Radio",
         "city": "Icod de los Vinos",
@@ -45,6 +45,13 @@ STATIONS_DB = [
         "country": "Canada",
         "location": (42.314079, -83.036858),
         "stream": "http://stream.cjam.ca/CJAM-live-256k.mp3.m3u",
+    },
+    {
+        "name": "Bullshit folk from Germany",
+        "city": "Lantsberg aum Smth",
+        "country": "DE",
+        "location": (48.0, 10.8),
+        "stream": "https://radio-jodlerwirt.stream.laut.fm/radio-jodlerwirt",
     },
 
 ]
